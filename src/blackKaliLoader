@@ -1,0 +1,182 @@
+#!/bin/bash
+
+# Project Name: BlackKaliLoader
+# Module Name: sendEndpoint.py
+# Author: gdjohn4s
+# Email: john4s@protonmail.ch
+# Version: 1.0.0
+
+# LICENSE:
+# This program is free software: you can redistribute it and/or modify it under the terms of the 
+# GNU General Public License as published by the Free Software Foundation, either version 3 of the 
+# License, or (at your option) any later version.
+# 
+# This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; 
+# without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. 
+# See the GNU General Public License for more details.
+
+# DEBUG: uncomment this to activate debug option
+# set -x
+
+AUTHOR="john4s"
+VERSION="1.0.0"
+NGTOKEN=""
+NGINST=false
+NGEXTRACT=false
+NGAUTH=false
+fileurl=''
+filename=''
+
+
+header() {
+    echo -e "\n\n"
+    echo -e "           '##:::'##::::'###::::'##:::::::'####:                "
+    echo -e "            ##::'##::::'## ##::: ##:::::::. ##::                "
+    echo -e "            ##:'##::::'##:. ##:: ##:::::::: ##::                "
+    echo -e "            #####::::'##:::. ##: ##:::::::: ##::                "
+    echo -e "            ##. ##::: #########: ##:::::::: ##::                "
+    echo -e "            ##:. ##:: ##.... ##: ##:::::::: ##::                "
+    echo -e "            ##::. ##: ##:::: ##: ########:'####:                "
+    echo -e "           ..::::..::..:::::..::........::....::                "
+    echo -e "'##::::::::'#######:::::'###::::'########::'########:'########::"
+    echo -e " ##:::::::'##.... ##:::'## ##::: ##.... ##: ##.....:: ##.... ##:"
+    echo -e " ##::::::: ##:::: ##::'##:. ##:: ##:::: ##: ##::::::: ##:::: ##:"
+    echo -e " ##::::::: ##:::: ##:'##:::. ##: ##:::: ##: ######::: ########::"
+    echo -e " ##::::::: ##:::: ##: #########: ##:::: ##: ##...:::: ##.. ##:::"
+    echo -e " ##::::::: ##:::: ##: ##.... ##: ##:::: ##: ##::::::: ##::. ##::"
+    echo -e " ########:. #######:: ##:::: ##: ########:: ########: ##:::. ##:"
+    echo -e "........:::.......:::..:::::..::........:::........::..:::::..::"
+    echo -e "                        Author: $AUTHOR                         "
+    echo -e "                        Version: $VERSION\n\n                   "
+}
+
+check_arch() {
+    : '
+    Here we check if our arch is an arm7 or arm8 to download the right executable file
+    '
+    arch=$(uname -m)
+    if [[ $arch == "armv7l" ]]; then
+        echo -e "[+] Architecture $arch OK"
+        filename='ngrok-stable-linux-arm.tgz'
+        fileurl='https://bin.equinox.io/c/4VmDzA7iaHb/ngrok-stable-linux-arm.tgz'
+    elif [[ $arch == "armv8" ]]; then
+        echo -e "[+] Architecture $arch OK"
+        filename='ngrok-stable-linux-arm64.tgz'
+        fileurl='https://bin.equinox.io/c/4VmDzA7iaHb/ngrok-stable-linux-arm64.tgz'
+    else
+        echo -e "[-] Can't run this script on Arch --> $arch"
+        exit 1
+    fi
+}
+
+check_ngrok() {
+    : '
+    Check if ngrok package or executable is already installed on the system,
+    return True or False
+    '
+    pkg=$(dpkg --list | grep ngrok | wc -l)
+    if [[ $pkg -gt 0 ]]; then
+        echo -e "[+] Ngrok ... OK"
+        NGINST=true
+    else
+        echo -e "[-] Can't find ngrok package, check in current directory"
+        ngfile=$(find . -name "ngrok*" -type f)
+        if [[ -z $ngfile ]]; then
+            echo -e "[-] Not found in current directory, downloading the file"
+        else
+            echo -e "[+] Ngrok found in current directory, configuring.."
+            NGINST=true
+        fi
+    fi
+}
+
+check_auth_ngrok() {
+    : '
+    Check if Ngrok Token is initialized correctly at the beginning of the script, then it just auth
+    using it. Return True or False
+    '
+    if [[ $NGTOKEN == '' ]]; then
+        echo -e "[-] No Token found, please insert a Token"
+        exit 1
+    else
+        echo -e "[+] Token Found! -> $NGTOKEN"
+        ./ngrok authtoken $NGTOKEN
+        if [[ $? -gt 0 ]]; then
+            echo -e "[-] Error during usage of Token --> $NGTOKEN"
+            exit 1
+        else
+            echo -e "[+] Token implemented correctly!"
+            NGAUTH=true
+        fi
+    fi
+}
+
+install_ngrok() {
+    : '
+    Just download ngrok package from source end extract in current working directory
+    '
+    get_zip=$(wget $fileurl)
+    if [[ $? -eq 0 ]]; then
+        echo -e "[+] Downloaded $filename, extracting in $(pwd)"
+        tar -xvf $filename
+        if [[ $? -gt 0 ]]; then
+            echo -e "[-] Error during extraction $filename"
+        else
+            NGEXTRACT=true
+        fi
+    else
+        echo -e "[-] Error during download $filename from source: $url"
+        exit 1
+    fi
+}
+
+#################### MAIN EXECUTION #####################
+header
+echo -e "[+] $(date +%d-%m-%Y_%H:%M:%S) : START"
+check_arch
+check_ngrok
+if [[ $NGINST = false ]]; then
+    install_ngrok
+    if [[ $NGEXTRACT = true ]]; then
+        check_auth_ngrok
+        if [[ $NGAUTH = true ]]; then
+            ngexec=$(ps -eaf | grep ngrok | grep -v grep | wc -l)
+            if [[ $ngexec -eq 0 ]]; then
+                ./ngrok tcp 22 </dev/null &>/dev/null &
+                echo -e "[+] Ngrok service started, sending endpoint"
+                python sendEndpoint.py 2> /dev/null
+                if [[ $? -gt 1 ]]; then
+                    python3 sendEndpoint.py
+                fi
+            else
+                echo -e "[+] Ngrok service already running, sending endpoint.."
+                python sendEndpoint.py 2> /dev/null
+                if [[ $? -gt 1 ]]; then
+                    python3 sendEndpoint.py
+                fi
+            fi
+        fi
+    fi
+else
+    tar -xvf $filename
+    echo -e "[+] Extracted $filename in current working directory"
+    check_auth_ngrok
+    if [[ $NGAUTH = true ]]; then
+        ngexec=$(ps -eaf | grep ngrok | grep -v grep | wc -l)
+        if [[ $ngexec -eq 0 ]]; then
+            ./ngrok tcp 22 </dev/null &>/dev/null &
+            echo -e "[+] Ngrok service started, sending endpoint"
+            python sendEndpoint.py 2> /dev/null
+            if [[ $? -gt 1 ]]; then
+                python3 sendEndpoint.py
+            fi
+        else
+            echo -e "[+] Ngrok service already running, sending endpoint.."
+            python sendEndpoint.py 2> /dev/null
+            if [[ $? -gt 1 ]]; then
+                python3 sendEndpoint.py
+            fi
+        fi
+    fi
+fi
+echo -e "[+] $(date +%d-%m-%Y_%H:%M:%S) : END"
