@@ -99,7 +99,7 @@ check_auth_ngrok() {
         echo -e "[-] No Token found, please insert a Token"
         exit 1
     else
-        echo -e "[+] Token Found! -> $NGTOKEN"
+        echo -e "[+] Token Found!"
         ./ngrok authtoken $NGTOKEN
         if [[ $? -gt 0 ]]; then
             echo -e "[-] Error during usage of Token --> $NGTOKEN"
