@@ -150,7 +150,7 @@ fi
 
 header
 echo -e "[+] $(date +%d-%m-%Y_%H:%M:%S) : START"
-#check_arch
+check_arch
 check_ngrok
 if [[ $NGINST = false ]]; then
     install_ngrok
