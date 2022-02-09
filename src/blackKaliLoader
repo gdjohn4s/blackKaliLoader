@@ -136,7 +136,35 @@ usage() {
     echo -e "Example: ./blackkaliloader -t 'mytoken'"
 }
 
+check_crond() {
+	:'
+	Checking if Cron Daemon is running, otherwise try to start
+	'
+	crond=$("service cron status | sed -n 3p | awk '{print $2}'")
+	if [[ $crond != 'active' ]]; then
+		echo -e "[-] Cron Daemon not running, trying to start service.."
+		service cron start
+		if [[ $? -gt 0 ]]; then
+			echo -e "[-] Error starting cron daemon"
+		else
+			echo -e "[+] Cron Daemon started succesfully"
+		fi
+	fi
+}
+
+add_cron() {
+	echo -e "Adding crontab entry"
+}
+
 #################### MAIN EXECUTION #####################
+:'
+Check execution privileges
+'
+if [[ $UID -gt 0 ]]; then
+	echo -e "[-] Please run with sudo privileges!"
+	exit(1)
+fi
+
 : '
 Setting option -t to set a token before launching the programm
 '
@@ -147,6 +175,7 @@ else
     usage
     exit 1
 fi
+
 
 header
 echo -e "[+] $(date +%d-%m-%Y_%H:%M:%S) : START"
