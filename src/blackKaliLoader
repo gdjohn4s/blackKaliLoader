@@ -157,12 +157,12 @@ add_cron() {
 }
 
 #################### MAIN EXECUTION #####################
-:'
+: '
 Check execution privileges
 '
 if [[ $UID -gt 0 ]]; then
 	echo -e "[-] Please run with sudo privileges!"
-	exit(1)
+	exit 1
 fi
 
 : '
